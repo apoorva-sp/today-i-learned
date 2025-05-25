@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import supabase from "./supabase";
 import Cookies from "js-cookie";
 
@@ -295,6 +295,23 @@ function Fact({ fact, setFacts, username, setShowLoginForm }) {
       );
     }
   }
+  async function handleUnVote(voteType) {
+    setIsUpdating(true);
+    const { data: updatedFact, error } = await supabase
+      .from("facts")
+      .update({
+        [voteType]: fact[voteType] - 1,
+      })
+      .eq("id", fact.id)
+      .select();
+    setIsUpdating(false);
+    if (!error) {
+      // Update the local state with the new votes
+      setFacts((facts) =>
+        facts.map((f) => (f.id === fact.id ? updatedFact[0] : f))
+      );
+    }
+  }
   return (
     <li className="fact">
       <p>
@@ -343,7 +360,7 @@ function LoginForm({ setShowLoginForm }) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [isLogin, setIsLogin] = useState("Sign Up");
+  const [isLogin, setIsLogin] = useState(true);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -364,6 +381,12 @@ function LoginForm({ setShowLoginForm }) {
       const user = data.find((user) => user.username === username);
 
       if (!user) {
+        if (isLogin) {
+          alert("User not found. Please sign up.");
+
+          setIsLoading(false);
+          return;
+        }
         const { data: newUser, error: insertError } = await supabase
           .from("users")
           .insert([{ username, password }])
@@ -383,6 +406,12 @@ function LoginForm({ setShowLoginForm }) {
       } else if (user) {
         if (isLogin && user.password !== password) {
           setErrorMsg("Invalid password");
+          setIsLoading(false);
+
+          return;
+        }
+        if (!isLogin) {
+          alert("Username already exists. Please choose another one.");
           setIsLoading(false);
           return;
         }
@@ -406,6 +435,7 @@ function LoginForm({ setShowLoginForm }) {
       <input
         type="text"
         placeholder="Username"
+        name="username"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
         disabled={isLoading}
@@ -414,6 +444,7 @@ function LoginForm({ setShowLoginForm }) {
       <input
         type="password"
         placeholder="Password"
+        name="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         disabled={isLoading}
@@ -422,10 +453,23 @@ function LoginForm({ setShowLoginForm }) {
       <button type="submit" className="btn btn-large" disabled={isLoading}>
         {isLogin ? "Login" : "Sign Up"}
       </button>
+
       <p>{isLogin ? "Don't have an account?" : "Already have an account?"} </p>
-      <a href="#" onClick={() => setIsLogin(!isLogin)}>
+      <button
+        type="button"
+        className="toggle-btn"
+        onClick={() => setIsLogin(!isLogin)}
+      >
         {isLogin ? "Sign Up" : "Login"}
-      </a>
+      </button>
+      <button
+        type="submit"
+        className="toggle-btn"
+        disabled={isLoading}
+        onClick={() => setShowLoginForm(false)}
+      >
+        Back
+      </button>
       {errorMsg && <p className="error-message">{errorMsg}</p>}
     </form>
   );

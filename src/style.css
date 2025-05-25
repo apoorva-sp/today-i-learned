@@ -298,3 +298,8 @@ ul {
     padding: 12px 16px;
   }
 }
+.toggle-btn {
+  all: unset;
+  cursor: pointer;
+  color: rgb(157, 157, 234);
+}
